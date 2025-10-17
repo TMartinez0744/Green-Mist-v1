@@ -206,7 +206,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.34575453, y: -0.12581655, z: 0.046842903, w: 0.928671}
+  m_LocalRotation: {x: 0.34596795, y: -0.12151113, z: 0.04523995, w: 0.9292441}
   m_LocalPosition: {x: 0, y: 3.5273962, z: -4.0924654}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -457,6 +457,18 @@ PrefabInstance:
     - target: {fileID: 1319785180176412539, guid: dcf2dd140097ea041ba8b70d12fa4df9, type: 3}
       propertyPath: m_Layer
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1655905564728882566, guid: dcf2dd140097ea041ba8b70d12fa4df9, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: efeeb4633040a834d82f96a10de79793, type: 2}
+    - target: {fileID: 1655905564728882566, guid: dcf2dd140097ea041ba8b70d12fa4df9, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1655905564728882566, guid: dcf2dd140097ea041ba8b70d12fa4df9, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2098896529023851309, guid: dcf2dd140097ea041ba8b70d12fa4df9, type: 3}
       propertyPath: m_Layer
@@ -961,7 +973,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 903895424}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.3457545, y: -0.12581654, z: 0.04684288, w: 0.928671}
+  m_LocalRotation: {x: 0.34596792, y: -0.12151112, z: 0.045239933, w: 0.92924416}
   m_LocalPosition: {x: 0, y: 3.5273962, z: -4.0924654}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1079,13 +1091,13 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2.5
-  m_Radius: 0.5
+  m_Height: 1.82
+  m_Radius: 0.35
   m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
+  m_StepOffset: 0.35
+  m_SkinWidth: 0.03
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.75, z: 0}
+  m_Center: {x: 0, y: 0.89, z: 0}
 --- !u!114 &1151446638
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1100,9 +1112,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   controller: {fileID: 1151446637}
   cam: {fileID: 330585546}
-  speed: 6
+  walkSpeed: 4.5
+  runSpeed: 7.5
   turnSmoothTime: 0.1
+  turnSmoothTimeRun: 0.07
+  accelTime: 0.08
+  jumpHeight: 1.4
   gravity: -9.81
+  coyoteTime: 0.12
+  jumpBuffer: 0.12
 --- !u!1 &1684004759
 GameObject:
   m_ObjectHideFlags: 0
@@ -1207,7 +1225,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.525, y: 1, z: 2.7113}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
