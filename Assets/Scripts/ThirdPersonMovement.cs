@@ -66,17 +66,22 @@ public class ThirdPersonMovement : MonoBehaviour
         if (desiredDir.sqrMagnitude > 1f) desiredDir.Normalize();
 
         // --- ROTACIÓN SUAVIZADA HACIA desiredDir ---
-        if (desiredDir.sqrMagnitude > 0.0001f)
-        {
-            float targetAngle = Mathf.Atan2(desiredDir.x, desiredDir.z) * Mathf.Rad2Deg;
-            float turnTime = isCrouching ? turnSmoothTimeCrouch : (run ? turnSmoothTimeRun : turnSmoothTime);
+if (desiredDir.sqrMagnitude > 0.0001f)
+{
+    float targetAngle = Mathf.Atan2(desiredDir.x, desiredDir.z) * Mathf.Rad2Deg;
 
-            float angle = Mathf.SmoothDampAngle(
-                transform.eulerAngles.y, targetAngle,
-                ref turnSmoothVelocity, turnTime);
+    //SUMO 180° PARA QUE DEJE DE HACER MOONWALK
+    targetAngle += 180f;
 
-            transform.rotation = Quaternion.Euler(0f, angle, 0f);
-        }
+    float turnTime = isCrouching ? turnSmoothTimeCrouch : (run ? turnSmoothTimeRun : turnSmoothTime);
+
+    float angle = Mathf.SmoothDampAngle(
+        transform.eulerAngles.y, targetAngle,
+        ref turnSmoothVelocity, turnTime);
+
+    transform.rotation = Quaternion.Euler(0f, angle, 0f);
+}
+
 
         // --- ACELERACIÓN SUAVIZADA (con crouch) ---
         float targetSpeed = 0f;
