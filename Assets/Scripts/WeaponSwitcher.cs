@@ -13,15 +13,18 @@ public class WeaponSwitcher : MonoBehaviour
     bool isEquipped = false; // empieza en la espalda
 
     void Start()
+{
+    // Si ya está en BackSlot en la escena, NO lo resetees preventivamente.
+    // Solo asegurate que arranca "en espalda" sin tocar transform.
+    isEquipped = false;
+
+    // Opcional: si querés forzar que sea hijo del backSlot pero SIN resetear:
+    if (weapon != null && backSlot != null && weapon.parent != backSlot)
     {
-        // Aseguramos que arranca en la espalda
-        if (weapon != null && backSlot != null)
-        {
-            weapon.SetParent(backSlot, false);
-            weapon.localPosition = Vector3.zero;
-            weapon.localRotation = Quaternion.identity;
-        }
+        weapon.SetParent(backSlot, true); // mantiene el world (no lo mueve)
     }
+}
+
 
     void Update()
     {
