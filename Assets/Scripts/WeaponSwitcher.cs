@@ -11,6 +11,8 @@ public class WeaponSwitcher : MonoBehaviour
     public KeyCode toggleKey = KeyCode.Q;  // tecla para equipar/guardar
 
     bool isEquipped = false; // empieza en la espalda
+    
+    public bool IsEquipped => isEquipped;
 
     void Start()
 {
