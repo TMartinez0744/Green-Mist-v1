@@ -48,6 +48,9 @@ public class ThirdPersonMovement : MonoBehaviour
 
     void Update()
     {
+        if (!enabled) return;
+        if (!controller || !controller.enabled) return;
+
         // --- INPUT ---
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");

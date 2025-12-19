@@ -6,7 +6,7 @@ public class EnemyAI : MonoBehaviour
     [Header("Refs")]
     public Transform player;
     public NavMeshAgent agent;
-    public Animator anim; // opcional
+    public Animator anim;
 
     [Header("Patrol")]
     public Transform[] patrolPoints;
@@ -21,6 +21,7 @@ public class EnemyAI : MonoBehaviour
     [Header("Attack")]
     public float attackCooldown = 1.2f;
     float atkCd;
+    bool isAttacking;
 
     enum State { Patrol, Chase, Attack }
     State state = State.Patrol;
@@ -38,7 +39,6 @@ public class EnemyAI : MonoBehaviour
             var p = GameObject.FindGameObjectWithTag("Player");
             if (p) player = p.transform;
         }
-
         GoToNextPatrol();
     }
 
@@ -48,12 +48,10 @@ public class EnemyAI : MonoBehaviour
 
         float d = Vector3.Distance(transform.position, player.position);
 
-        // elegir estado
         if (d <= attackRange) state = State.Attack;
         else if (d <= detectRange) state = State.Chase;
         else state = State.Patrol;
 
-        // ejecutar
         switch (state)
         {
             case State.Patrol: Patrol(); break;
@@ -61,14 +59,12 @@ public class EnemyAI : MonoBehaviour
             case State.Attack: Attack(); break;
         }
 
-        // anim (opcional)
         if (anim) anim.SetFloat("Speed", agent.velocity.magnitude);
     }
 
     void Patrol()
     {
         if (patrolPoints == null || patrolPoints.Length == 0) return;
-
         agent.isStopped = false;
 
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
@@ -85,7 +81,6 @@ public class EnemyAI : MonoBehaviour
     void GoToNextPatrol()
     {
         if (patrolPoints == null || patrolPoints.Length == 0) return;
-
         patrolIndex = (patrolIndex + 1) % patrolPoints.Length;
         agent.SetDestination(patrolPoints[patrolIndex].position);
     }
@@ -102,15 +97,18 @@ public class EnemyAI : MonoBehaviour
         FacePlayer();
 
         if (atkCd > 0f) atkCd -= Time.deltaTime;
-        if (atkCd <= 0f)
-        {
-            atkCd = attackCooldown;
+        if (atkCd > 0f) return;
+        if (isAttacking) return;
 
-            // TODO: acá después llamamos a tu Health del Player
-            if (anim) anim.SetTrigger("Attack");
-            Debug.Log($"{name} ATTACK");
-        }
+        atkCd = attackCooldown;
+        isAttacking = true;
+        if (anim) anim.SetTrigger("Attack");
+
+        // desbloqueo simple (si tu anim dura distinto, ajustá)
+        Invoke(nameof(EndAttack), 0.9f);
     }
+
+    void EndAttack() => isAttacking = false;
 
     void FacePlayer()
     {
