@@ -29,6 +29,18 @@ public class TimeOfDay : MonoBehaviour
     public float fogEndNight = 160f;   // niebla cerrada
     public float fogEndDawn  = 420f;   // se abre al amanecer
 
+    [Header("Cielo")]
+    public bool controlSkybox = true;
+    public Material skybox;                 // Sky_Night. Si queda vacio usa el de Lighting.
+    public Color skyTintNight   = new Color(0.12f, 0.18f, 0.30f);
+    public Color skyTintDawn    = new Color(0.75f, 0.62f, 0.58f);
+    public Color skyGroundNight = new Color(0.04f, 0.05f, 0.06f);
+    public Color skyGroundDawn  = new Color(0.35f, 0.30f, 0.28f);
+    public float skyAtmosphereNight = 0.35f;
+    public float skyAtmosphereDawn  = 1.10f;
+    public float skyExposureNight = 0.55f;
+    public float skyExposureDawn  = 1.15f;
+
     [Header("Ambiente")]
     public bool controlAmbient = true;
     public Color ambientSkyNight     = new Color(0.10f, 0.13f, 0.18f);
@@ -71,6 +83,18 @@ public class TimeOfDay : MonoBehaviour
             RenderSettings.fogColor = Color.Lerp(fogColorNight, fogColorDawn, t);
             RenderSettings.fogStartDistance = Mathf.Lerp(fogStartNight, fogStartDawn, t);
             RenderSettings.fogEndDistance   = Mathf.Lerp(fogEndNight,   fogEndDawn,   t);
+        }
+
+        if (controlSkybox)
+        {
+            var sky = skybox ? skybox : RenderSettings.skybox;
+            if (sky && sky.HasProperty("_SkyTint"))
+            {
+                sky.SetColor("_SkyTint",     Color.Lerp(skyTintNight,   skyTintDawn,   t));
+                sky.SetColor("_GroundColor", Color.Lerp(skyGroundNight, skyGroundDawn, t));
+                sky.SetFloat("_AtmosphereThickness", Mathf.Lerp(skyAtmosphereNight, skyAtmosphereDawn, t));
+                sky.SetFloat("_Exposure",            Mathf.Lerp(skyExposureNight,   skyExposureDawn,   t));
+            }
         }
 
         if (controlAmbient)
