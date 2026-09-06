@@ -47,6 +47,8 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ## Gallery
 
+![Night over the village, the torii ahead](docs/images/night.jpg)
+
 ![The village before the climb](docs/images/village.jpg)
 
 ![A villager by the bridge](docs/images/bridge.jpg)
