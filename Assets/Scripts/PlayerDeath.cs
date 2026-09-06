@@ -1,4 +1,6 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerDeath : MonoBehaviour
 {
@@ -9,9 +11,16 @@ public class PlayerDeath : MonoBehaviour
     [Header("Animator")]
     public string dieTrigger = "Die";
 
+    [Header("Timing")]
+    public float freezeDelay = 0.8f; // tiempo para que se vea la anim
+
     [Header("UI")]
-    public GameObject gameOverPanel;
-    public GameObject mainMenuPanel;
+    public GameObject gameOverPanel;   // DeathMenu / GameOverPanel
+    public GameObject mainMenuPanel;   // MainMenuPanel (en la misma escena)
+
+    [Header("Disable On Death")]
+    public MonoBehaviour[] disableOnDeath;
+    public CharacterController characterController;
 
     bool dead;
 
@@ -19,6 +28,7 @@ public class PlayerDeath : MonoBehaviour
     {
         if (!health) health = GetComponent<Health>();
         if (!animator) animator = GetComponentInChildren<Animator>();
+        if (!characterController) characterController = GetComponent<CharacterController>();
     }
 
     void OnEnable()
@@ -36,20 +46,41 @@ public class PlayerDeath : MonoBehaviour
         if (dead) return;
         dead = true;
 
-        // reproducir anim aunque después pauses
-        animator.updateMode = AnimatorUpdateMode.UnscaledTime;
-        animator.SetTrigger(dieTrigger);
+        // cortar control
+        if (disableOnDeath != null)
+            foreach (var b in disableOnDeath)
+                if (b) b.enabled = false;
 
-        Invoke(nameof(ShowGameOver), 0.8f);
+        if (characterController) characterController.enabled = false;
+
+        // disparar anim
+        if (animator)
+        {
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime; // clave si después pausás
+            animator.ResetTrigger(dieTrigger);
+            animator.SetTrigger(dieTrigger);
+        }
+
+        StartCoroutine(DeathFlow());
     }
 
-    void ShowGameOver()
+    IEnumerator DeathFlow()
     {
-        Time.timeScale = 0f;
+        yield return new WaitForSecondsRealtime(freezeDelay);
+
         if (gameOverPanel) gameOverPanel.SetActive(true);
+
+        // pausar el juego (UI sigue funcionando)
+        Time.timeScale = 0f;
     }
 
-    // === BOTONES ===
+    // ===== BOTONES (tienen que ser public void sin parámetros) =====
+
+    public void Retry()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
 
     public void MainMenu()
     {
@@ -57,16 +88,18 @@ public class PlayerDeath : MonoBehaviour
 
         if (gameOverPanel) gameOverPanel.SetActive(false);
         if (mainMenuPanel) mainMenuPanel.SetActive(true);
-    }
 
-    public void Retry()
-    {
-        Time.timeScale = 1f;
-        UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
+        // opcional: si querés que no quede el player “vivo” atrás
+        // gameObject.SetActive(false);
     }
 
     public void Quit()
     {
+        Time.timeScale = 1f;
         Application.Quit();
+
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #endif
     }
 }
