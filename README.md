@@ -45,9 +45,13 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ---
 
-## Screenshots
+## Gallery
 
-![The path to the torii gate](docs/images/screenshot.jpeg)
+![The village before the climb](docs/images/village.jpg)
+
+![A villager by the bridge](docs/images/bridge.jpg)
+
+![The torii gate on the way up](docs/images/torii.jpg)
 
 ---
 
