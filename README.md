@@ -47,7 +47,7 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ## Screenshots
 
-To be added, in `docs/images/`: the village before nightfall, the bamboo path, combat against a mist creature, and a short gameplay clip.
+![The path to the torii gate](docs/images/screenshot.png)
 
 ---
 
