@@ -47,6 +47,8 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ## Gallery
 
+![Onji on the lantern-lit street before setting out](docs/images/onji.jpg)
+
 ![Night over the village, the torii ahead](docs/images/night.jpg)
 
 ![The village before the climb](docs/images/village.jpg)
