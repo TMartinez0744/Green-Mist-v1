@@ -55,7 +55,7 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ![A villager by the bridge](docs/images/bridge.jpg)
 
-![The torii gate on the way up](docs/images/torii.jpg)
+![Onji leaping the garden bridge, the lit approach beyond](docs/images/onji2.jpg)
 
 ---
 
