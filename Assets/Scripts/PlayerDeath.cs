@@ -12,7 +12,14 @@ public class PlayerDeath : MonoBehaviour
     public string dieTrigger = "Die";
 
     [Header("Timing")]
-    public float freezeDelay = 0.8f; // tiempo para que se vea la anim
+    [Tooltip("Cuanto se ve la animacion de morir antes de empezar a fundir a negro.")]
+    public float verAnimacion = 1.6f;
+
+    [Tooltip("Cuanto tarda el fundido a negro, estilo Dark Souls.")]
+    public float fundidoNegro = 1.5f;
+
+    [Tooltip("Pausa en negro total antes de mostrar DEFEAT.")]
+    public float esperaEnNegro = 0.6f;
 
     [Header("UI")]
     public GameObject gameOverPanel;   // DeathMenu / GameOverPanel
@@ -66,11 +73,24 @@ public class PlayerDeath : MonoBehaviour
 
     IEnumerator DeathFlow()
     {
-        yield return new WaitForSecondsRealtime(freezeDelay);
+        // 1. Dejar que se vea caer. El juego sigue corriendo: la camara
+        //    queda sobre el cuerpo, los enemigos se quedan ahi.
+        yield return new WaitForSecondsRealtime(verAnimacion);
 
+        // 2. Fundido lento a negro, estilo Dark Souls. El fader corre en
+        //    tiempo real, asi que no importa si despues pausamos.
+        if (ScreenFader.I != null)
+            yield return ScreenFader.I.FadeTo(1f, fundidoNegro);
+        else
+            yield return new WaitForSecondsRealtime(fundidoNegro);
+
+        // 3. Un respiro en negro total antes del texto.
+        yield return new WaitForSecondsRealtime(esperaEnNegro);
+
+        // 4. Recien ahora aparece DEFEAT, ya sobre la pantalla negra.
         if (gameOverPanel) gameOverPanel.SetActive(true);
 
-        // pausar el juego (UI sigue funcionando)
+        // Pausar el juego. La UI sigue andando con unscaled time.
         Time.timeScale = 0f;
     }
 
@@ -79,12 +99,16 @@ public class PlayerDeath : MonoBehaviour
     public void Retry()
     {
         Time.timeScale = 1f;
+        // Sacamos el negro antes de recargar, si no la escena nueva
+        // arranca a oscuras.
+        if (ScreenFader.I != null) ScreenFader.I.FadeTo(0f);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void MainMenu()
     {
         Time.timeScale = 1f;
+        if (ScreenFader.I != null) ScreenFader.I.FadeTo(0f);
 
         if (gameOverPanel) gameOverPanel.SetActive(false);
         if (mainMenuPanel) mainMenuPanel.SetActive(true);

@@ -18,6 +18,15 @@ public class PlayerAttackSimple : MonoBehaviour
     public float heavyCooldown = 0.6f;
     float lightCd, heavyCd;
 
+    [Header("Arranque")]
+    [Tooltip("Ignora el input de ataque justo despues de salir de un menu. Sin esto, el clic con el que apretaste PLAY llega al primer frame de juego y Onji pega solo.")]
+    public float ignorarInputAlDespausar = 0.2f;
+
+    float ultimoDespausado;
+    float timeScalePrevio = 1f;
+    float inicioPausa;
+    const float pausaMinimaMenu = 0.15f; // mas largo que cualquier hit stop
+
     [Header("SFX")]
     public AudioSource sfxSource;          // AudioSource en PlayerRoot (PlayOnAwake off)
     public AudioClip bambooWhoosh;         // tu mp3
@@ -32,6 +41,10 @@ public class PlayerAttackSimple : MonoBehaviour
     {
         if (!animator) animator = GetComponentInChildren<Animator>();
         if (!sfxSource) sfxSource = GetComponent<AudioSource>(); // si lo ponés en el mismo GO
+
+        // Tambien cubre el arranque de la escena, no solo el despause.
+        ultimoDespausado = Time.unscaledTime;
+        timeScalePrevio = Time.timeScale;
     }
 
     void Update()
@@ -39,9 +52,34 @@ public class PlayerAttackSimple : MonoBehaviour
         if (lightCd > 0f) lightCd -= Time.deltaTime;
         if (heavyCd > 0f) heavyCd -= Time.deltaTime;
 
-        bool lightPressed = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Z);
-        bool heavyPressed = Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.X);
-        bool ultPressed   = Input.GetKeyDown(KeyCode.R)  || Input.GetKeyDown(KeyCode.C);
+        // El jugador existe mientras estas en el menu, asi que el clic con
+        // el que apretaste PLAY cae en el primer frame de juego y se lee
+        // como un golpe. Tus menus marcan la pausa con timeScale = 0, asi
+        // que detectamos el 0 -> 1 y damos un respiro antes de leer input.
+        // Registramos cuando empieza cada pausa para medir cuanto duro.
+        if (timeScalePrevio > 0f && Time.timeScale == 0f)
+            inicioPausa = Time.unscaledTime;
+
+        // Solo cuenta como "salir de un menu" si la pausa fue larga. El hit
+        // stop tambien pone timeScale en 0, pero dura 0.06 s: sin este
+        // filtro, cada golpe que conectaba bloqueaba el siguiente 0.2 s.
+        if (timeScalePrevio == 0f && Time.timeScale > 0f
+            && (Time.unscaledTime - inicioPausa) > pausaMinimaMenu)
+            ultimoDespausado = Time.unscaledTime;
+        timeScalePrevio = Time.timeScale;
+
+        // Dos candados:
+        // 1) Con el juego pausado no se lee input. Update() sigue corriendo
+        //    con timeScale 0, asi que sin esto el clic del boton PLAY se
+        //    leia como golpe estando todavia en el menu.
+        // 2) Y un respiro despues de despausar, por el clic que cae justo
+        //    en el borde entre menu y juego.
+        bool puedeAtacar = Time.timeScale > 0f
+                           && (Time.unscaledTime - ultimoDespausado) >= ignorarInputAlDespausar;
+
+        bool lightPressed = puedeAtacar && (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Z));
+        bool heavyPressed = puedeAtacar && (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.X));
+        bool ultPressed   = puedeAtacar && (Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.C));
 
         if (lightPressed && lightCd <= 0f)
         {

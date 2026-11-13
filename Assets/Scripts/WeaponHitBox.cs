@@ -1,9 +1,27 @@
+using System.Collections.Generic;
 using UnityEngine;
 
+// Hitbox del arma de Onji. Se enciende por ventana de animacion
+// (AttackHitboxWindow decide cuando) y mientras esta encendida golpea
+// a todo enemigo que tenga adentro.
 public class WeaponHitbox : MonoBehaviour {
+    [Header("Dano")]
     public int damage = 10;
+    public string enemyTag = "Enemy";
+
+    [Header("Texto flotante (opcional)")]
     public GameObject floatingTextPrefab;
+
+    [Header("Hit stop")]
+    [Tooltip("Segundos que se congela el tiempo al conectar un golpe. 0 = desactivado.")]
+    public float hitStop = 0.06f;
+
     Collider col;
+
+    // Enemigos ya golpeados en ESTA ventana. Se limpia cada vez que la
+    // ventana abre, asi cada golpe pega una sola vez por enemigo pero
+    // el proximo golpe puede volver a pegarle.
+    readonly HashSet<Health> yaGolpeados = new HashSet<Health>();
 
     void Awake() {
         col = GetComponent<Collider>();
@@ -11,48 +29,56 @@ public class WeaponHitbox : MonoBehaviour {
         col.enabled = false; // se enciende al atacar
     }
 
-    public void EnableHitbox()  { col.enabled = true;  Debug.Log("HITBOX ON"); }
-    public void DisableHitbox() { col.enabled = false; Debug.Log("HITBOX OFF"); }
+    public void EnableHitbox() {
+        col.enabled = true;
+        yaGolpeados.Clear(); // nueva ventana => todos pueden recibir de nuevo
+    }
 
-    void OnTriggerEnter(Collider other) {
-        if (!col.enabled) return; // por si algo lo deja prendido fuera de tiempo
+    public void DisableHitbox() {
+        col.enabled = false;
+    }
 
-        if (other.CompareTag("Enemy")) {
-            var h = other.GetComponent<Health>();
-            if (h != null) {
-                h.Take(damage);
-                Debug.Log($"HIT a {other.name} por {damage}. HP restante: {h.Current}/{h.maxHp}");
-            } else {
-                Debug.Log("Enemy sin Health");
-            }
-        } 
-        
-       
-        
+    // OnTriggerStay, no Enter: el hitbox se prende a mitad del golpe, asi
+    // que el enemigo casi siempre YA esta adentro del volumen cuando abre
+    // la ventana. Con Enter no se registraba nada salvo que te acercaras
+    // justo durante los pocos frames de la ventana (el "hay que pegar en
+    // un lugar justo"). Stay chequea cada frame de fisica.
+    void OnTriggerStay(Collider other) {
+        if (!col.enabled) return;
 
-if (floatingTextPrefab) {
-    var pos = other.bounds.center + Vector3.up * 2.5f;
-    var go  = Instantiate(floatingTextPrefab, pos, Quaternion.identity);
-    go.name = $"DmgText_{other.name}";
+        // El tag "Enemy" esta en el prefab padre, pero el collider que
+        // tocamos suele ser un hijo. Por eso subimos al root.
+        Transform root = other.transform.root;
+        if (!root.CompareTag(enemyTag)) return;
 
-    // grande para debug (después bajalo a 0.03–0.05)
-    go.transform.localScale = Vector3.one * 0.20f;
+        Health h = root.GetComponent<Health>();
+        if (h == null) h = root.GetComponentInChildren<Health>();
+        if (h == null) return;
 
-    // que dibuje por encima
-    var mr = go.GetComponent<MeshRenderer>();
-    if (mr) mr.sortingOrder = 5000;
+        // Ya le pegamos en esta ventana: no repetir.
+        if (yaGolpeados.Contains(h)) return;
+        yaGolpeados.Add(h);
 
-    // por si el prefab quedó con valores raros
-    var tmp = go.GetComponent<TMPro.TextMeshPro>();
-    if (tmp) { tmp.text = "-" + damage; tmp.fontSize = 8; tmp.color = Color.red; }
+        h.Take(damage);
 
-    go.GetComponent<FloatingDamage>()?.Setup(damage, Color.red);
-    Debug.Log($"💥 DmgText @ {pos} scale={go.transform.localScale}");
-}
+        // Texto flotante, knockback y hit stop SOLO cuando confirmamos
+        // que le pegamos a un enemigo de verdad. Antes esto estaba fuera
+        // del filtro y saltaba "-10" contra arboles y paredes.
+        SpawnDamageText(root, h);
 
+        var kb = root.GetComponent<SimpleKnockback>();
+        if (kb == null) kb = root.GetComponentInChildren<SimpleKnockback>();
+        if (kb != null) kb.ApplyKnockback(transform.position);
 
-        var kb = other.GetComponent<SimpleKnockback>();
-        if (kb != null)
-            kb.ApplyKnockback(transform.position);
+        if (hitStop > 0f) HitStop.Freeze(hitStop);
+    }
+
+    void SpawnDamageText(Transform root, Health h) {
+        if (!floatingTextPrefab) return;
+
+        Vector3 pos = root.position + Vector3.up * 2.5f;
+        var go = Instantiate(floatingTextPrefab, pos, Quaternion.identity);
+        go.name = $"DmgText_{root.name}";
+        go.GetComponent<FloatingDamage>()?.Setup(damage, Color.red);
     }
 }

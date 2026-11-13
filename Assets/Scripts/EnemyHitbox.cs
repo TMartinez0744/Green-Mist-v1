@@ -7,6 +7,10 @@ public class EnemyHitbox : MonoBehaviour
 
     Collider col;
 
+    // Una vez por ventana de ataque: el hitbox esta prendido varios frames,
+    // sin esto le pegaria al jugador cada frame de fisica. Se limpia al abrir.
+    Health yaGolpeado;
+
     void Awake()
     {
         col = GetComponent<Collider>();
@@ -14,23 +18,26 @@ public class EnemyHitbox : MonoBehaviour
         col.enabled = false;
     }
 
-    public void EnableHitbox()  => col.enabled = true;
-    public void DisableHitbox() => col.enabled = false;
+    public void EnableHitbox()  { col.enabled = true;  yaGolpeado = null; }
+    public void DisableHitbox() { col.enabled = false; }
 
-    void OnTriggerEnter(Collider other)
+    // OnTriggerStay, no Enter: el hitbox se prende a mitad del ataque, cuando
+    // el jugador YA esta parado enfrente, adentro del volumen. Con Enter no
+    // registraba salvo que el jugador entrara justo durante la ventana.
+    void OnTriggerStay(Collider other)
     {
         if (!col.enabled) return;
 
-        // Subimos al root del objeto que tocamos
         var root = other.transform.root;
-
-        // Filtramos por tag en el ROOT (no en el collider hijo)
         if (!root.CompareTag(playerTag)) return;
 
-        // Buscamos Health en el root o en hijos (PlayerRoot lo tiene)
         var h = root.GetComponent<Health>();
         if (h == null) h = root.GetComponentInChildren<Health>();
+        if (h == null) return;
 
-        if (h != null) h.Take(damage);
+        if (h == yaGolpeado) return; // ya le pegamos en esta ventana
+        yaGolpeado = h;
+
+        h.Take(damage);
     }
 }

@@ -14,6 +14,13 @@ public class ThirdPersonCamera : MonoBehaviour
 
     public float fieldOfView = 70f;
 
+    [Header("FOV al correr")]
+    [Tooltip("Cuantos grados se abre el campo de vision al esprintar.")]
+    public float fovExtraCorriendo = 8f;
+
+    [Tooltip("Cuanto tarda en abrirse y en volver.")]
+    public float fovSuavizado = 0.25f;
+
     [Header("Initial view")]
     public float startPitch = 18f;              // menos cenital al inicio
     public float shoulderOffset = 0.35f;        // 0 centrado, >0 derecha, <0 izquierda
@@ -22,6 +29,9 @@ public class ThirdPersonCamera : MonoBehaviour
     Vector3 currentPos;
     Quaternion currentRot;
     Camera cam;
+
+    ThirdPersonMovement mov;
+    float fovVel;
 
     void Awake()
     {
@@ -32,8 +42,10 @@ public class ThirdPersonCamera : MonoBehaviour
     {
         if (cam != null) cam.fieldOfView = fieldOfView;
 
+        if (target != null) mov = target.GetComponent<ThirdPersonMovement>();
+
         // vista inicial
-        pitch = startPitch;                      
+        pitch = startPitch;                    
         yaw   = target.eulerAngles.y;     
 
         Vector3 lookAt = target.position + targetOffset;
@@ -73,5 +85,19 @@ public class ThirdPersonCamera : MonoBehaviour
         transform.position = currentPos;
 
         transform.LookAt(lookAt);
+
+        // --- FOV KICK AL CORRER ---
+        // Abrir el campo de vision al esprintar es lo que hace que correr
+        // se SIENTA rapido: entra mas mundo en pantalla y los bordes pasan
+        // mas ligero. No depende de la animacion, asi que funciona igual
+        // aunque el ciclo de carrera sea generico.
+        if (cam != null && mov != null)
+        {
+            // 0 caminando, 1 a velocidad maxima de carrera.
+            float t = Mathf.InverseLerp(mov.walkSpeed, mov.runSpeed, mov.VelocidadActual);
+            float objetivo = fieldOfView + fovExtraCorriendo * t;
+
+            cam.fieldOfView = Mathf.SmoothDamp(cam.fieldOfView, objetivo, ref fovVel, fovSuavizado);
+        }
     }
 }

@@ -11,21 +11,30 @@ public class WeaponSwitcher : MonoBehaviour
     public KeyCode toggleKey = KeyCode.Q;  // tecla para equipar/guardar
 
     bool isEquipped = false; // empieza en la espalda
-    
+
     public bool IsEquipped => isEquipped;
 
-    void Start()
-{
-    // Si ya está en BackSlot en la escena, NO lo resetees preventivamente.
-    // Solo asegurate que arranca "en espalda" sin tocar transform.
-    isEquipped = false;
+    // Pose con la que el baston quedo apoyado en la espalda al arrancar la
+    // escena (la diagonal linda). La guardamos para restaurarla cada vez
+    // que se guarda, en vez de forzar rotacion 0 (que lo dejaba horizontal
+    // atravesando el cuerpo).
+    Vector3 backPos;
+    Quaternion backRot;
 
-    // Opcional: si querés forzar que sea hijo del backSlot pero SIN resetear:
-    if (weapon != null && backSlot != null && weapon.parent != backSlot)
+    void Start()
     {
-        weapon.SetParent(backSlot, true); // mantiene el world (no lo mueve)
+        isEquipped = false;
+
+        if (weapon != null && backSlot != null)
+        {
+            if (weapon.parent != backSlot)
+                weapon.SetParent(backSlot, true); // mantiene el world, no lo mueve
+
+            // Capturamos la pose buena tal como vino puesta en la escena.
+            backPos = weapon.localPosition;
+            backRot = weapon.localRotation;
+        }
     }
-}
 
 
     void Update()
@@ -42,10 +51,11 @@ public class WeaponSwitcher : MonoBehaviour
 
         if (isEquipped)
         {
-            // Guardar en la espalda
+            // Guardar en la espalda, restaurando la pose diagonal original
+            // en vez de identity.
             weapon.SetParent(backSlot, false);
-            weapon.localPosition = Vector3.zero;
-            weapon.localRotation = Quaternion.identity;
+            weapon.localPosition = backPos;
+            weapon.localRotation = backRot;
             isEquipped = false;
         }
         else
