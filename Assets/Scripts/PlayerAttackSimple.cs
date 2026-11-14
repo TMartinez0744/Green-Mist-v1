@@ -7,6 +7,8 @@ public class PlayerAttackSimple : MonoBehaviour
     public Animator animator;
     public WeaponHitbox weaponHitbox;
     public Renderer debugRenderer; // opcional
+    [Tooltip("Opcional. Se usa para girar a Onji hacia el enemigo al atacar. Si queda vacio se busca solo en este mismo objeto.")]
+    public ThirdPersonMovement movimiento;
 
     [Header("Animator state names")]
     public string lightState = "Light";
@@ -41,6 +43,7 @@ public class PlayerAttackSimple : MonoBehaviour
     {
         if (!animator) animator = GetComponentInChildren<Animator>();
         if (!sfxSource) sfxSource = GetComponent<AudioSource>(); // si lo ponés en el mismo GO
+        if (!movimiento) movimiento = GetComponent<ThirdPersonMovement>(); // esta en PlayerRoot, igual que este script
 
         // Tambien cubre el arranque de la escena, no solo el despause.
         ultimoDespausado = Time.unscaledTime;
@@ -86,6 +89,7 @@ public class PlayerAttackSimple : MonoBehaviour
             lightCd = lightCooldown;
             Flash(Color.green);
             PlayWhoosh();
+            GiroAsistido();
             animator.CrossFadeInFixedTime(lightState, 0.05f);
         }
 
@@ -94,6 +98,7 @@ public class PlayerAttackSimple : MonoBehaviour
             heavyCd = heavyCooldown;
             Flash(Color.blue);
             PlayWhoosh();
+            GiroAsistido();
             animator.CrossFadeInFixedTime(heavyState, 0.05f);
         }
 
@@ -101,8 +106,17 @@ public class PlayerAttackSimple : MonoBehaviour
         {
             Flash(Color.red);
             PlayWhoosh();
+            GiroAsistido();
             animator.CrossFadeInFixedTime(ultimateState, 0.05f);
         }
+    }
+
+    // Antes de cada golpe le pedimos al script de movimiento que encare al
+    // enemigo vivo mas cercano. Este script NO toca la rotacion: el unico
+    // que la escribe es ThirdPersonMovement, asi no se pelean entre los dos.
+    void GiroAsistido()
+    {
+        if (movimiento) movimiento.GirarHaciaEnemigoCercano();
     }
 
     void PlayWhoosh()
