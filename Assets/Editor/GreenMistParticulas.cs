@@ -330,7 +330,12 @@ public static class GreenMistParticulas
     //   - en loop y con prewarm: el juego arranca en el menu con el tiempo frenado, y con prewarm
     //     las particulas ya estan repartidas desde el primer frame;
     //   - espacio de simulacion World: las particulas no se mueven si se mueve el emisor;
-    //   - un tope bajo y explicito de particulas (maxParticles), por rendimiento.
+    //   - un tope bajo y explicito de particulas (maxParticles), por rendimiento;
+    //   - tiempo REAL (useUnscaledTime): se siguen moviendo aunque Time.timeScale valga 0.
+    //     El menu de inicio corre con el tiempo frenado, y sin esto la niebla, las luciernagas
+    //     y los petalos quedaban quietos como en una foto. (Por lo mismo tambien se mueven
+    //     detras de la pausa y durante el hit stop. No van mas rapido: es el mismo reloj,
+    //     solo que no se frena.)
     public static void ConfigurarBase(ParticleSystem ps, int cantidad, float vidaMin, float vidaMax)
     {
         ParticleSystem.MainModule main = ps.main;
@@ -338,6 +343,7 @@ public static class GreenMistParticulas
         main.loop = true;
         main.prewarm = true;
         main.playOnAwake = true;
+        main.useUnscaledTime = true;             // ver arriba: que no se congelen en el menu
         main.startDelay = 0f;
         main.startLifetime = new ParticleSystem.MinMaxCurve(vidaMin, vidaMax);
         main.startSpeed = 0f;                    // el movimiento lo dan "Velocity over Lifetime" y "Noise"
@@ -359,6 +365,29 @@ public static class GreenMistParticulas
         choque.enabled = false;
         ParticleSystem.TrailModule estelas = ps.trails;
         estelas.enabled = false;
+    }
+
+    // Pone en tiempo REAL todos los sistemas de particulas que cuelgan de "grupo" (tambien los
+    // apagados), SIN tocarles nada mas. Es lo mismo que hace ConfigurarBase, pero para los
+    // emisores que ya estan en la escena: asi no hace falta volver a correr los menus 3, 4 y 5
+    // (que pisarian lo que hayas ajustado a mano). Lo usa el menu 11.
+    // Devuelve cuantos cambio (0 si ya estaban todos).
+    public static int PonerTiempoReal(Transform grupo)
+    {
+        if (grupo == null) return 0;
+
+        int cambiados = 0;
+        foreach (ParticleSystem ps in grupo.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            ParticleSystem.MainModule main = ps.main;
+            if (main.useUnscaledTime) continue;
+
+            Undo.RecordObject(ps, "Green Mist: partículas en tiempo real");
+            main.useUnscaledTime = true;
+            EditorUtility.SetDirty(ps);
+            cambiados++;
+        }
+        return cambiados;
     }
 
     // Las particulas nacen en cualquier punto de una caja de este tamaño (en metros), centrada en el emisor.
@@ -447,16 +476,15 @@ public static class GreenMistParticulas
         EditorUtility.SetDirty(ps);
     }
 
-    // Deja una "foto" de las particulas a la vista en modo edicion, apenas termina el menu.
-    // Sin esto, fuera de Play un ParticleSystem solo se ve mientras lo tenes seleccionado.
-    // Es solo una vista previa quieta: no se guarda en la escena, y en Play se mueven de verdad.
+    // Deja los sistemas de particulas apagados y vacios en modo edicion.
+    // Antes aca se simulaba una "foto" quieta para verlos sin Play, pero simular 19 sistemas
+    // fuera de Play hacia que Unity llenara la Console con el aviso "JobTempAlloc has
+    // allocations that are more than the maximum lifespan of 4 frames old".
+    // Fuera de Play un ParticleSystem se ve igual al seleccionarlo; en Play arrancan solos.
     public static void VistaPrevia(Transform grupo)
     {
         foreach (ParticleSystem ps in grupo.GetComponentsInChildren<ParticleSystem>())
-        {
-            // Adelanta el sistema una vuelta entera (desde cero) y lo deja en pausa, ya lleno.
-            ps.Simulate(ps.main.duration, false, true);
-        }
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
     // Borra los hijos de "grupo" cuyo nombre empieza con "prefijo" y que esta corrida no uso

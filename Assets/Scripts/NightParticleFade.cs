@@ -1,10 +1,11 @@
 using UnityEngine;
 
-// Apaga de a poco un grupo de particulas hacia el amanecer (lo usan las luciernagas).
+// Prende o apaga de a poco un grupo de particulas segun la hora de TimeOfDay.
 //
 // Va en el objeto padre de los emisores (por ejemplo "GreenMist_Luciernagas").
-// De noche (hora baja) las particulas se ven enteras; entre "fullUntil" y "offFrom"
-// se van transparentando; desde "offFrom" quedan apagadas del todo.
+// Modo normal (luciernagas): de noche (hora baja) se ven enteras; entre "fullUntil"
+// y "offFrom" se van transparentando; desde "offFrom" quedan apagadas del todo.
+// Con "dayOnly" tildado (petalos) es al reves: apagadas de noche, enteras de dia.
 //
 // Se apagan bajando el ALPHA del material y no el color: con un material aditivo
 // el alpha es lo que decide cuanta luz suma, asi que en 0 desaparecen de verdad.
@@ -18,11 +19,14 @@ public class NightParticleFade : MonoBehaviour
     [Tooltip("El TimeOfDay de la escena. Si queda vacio lo busca solo.")]
     public TimeOfDay timeOfDay;
 
-    [Tooltip("Hasta esta hora las particulas estan al maximo.")]
-    [Range(0f, 1f)] public float fullUntil = 0.6f;
+    [Tooltip("Destildado = solo de noche (luciernagas). Tildado = solo de dia (petalos): se da vuelta el efecto.")]
+    public bool dayOnly = false;
 
-    [Tooltip("Desde esta hora las particulas estan apagadas del todo.")]
-    [Range(0f, 1f)] public float offFrom = 0.92f;
+    [Tooltip("Donde EMPIEZA el cambio. Modo noche: hasta esta hora estan al maximo. Modo dia: hasta esta hora estan apagadas.")]
+    [Range(0f, 1f)] public float fullUntil = 0.45f;
+
+    [Tooltip("Donde TERMINA el cambio. Modo noche: desde esta hora estan apagadas. Modo dia: desde esta hora estan al maximo.")]
+    [Range(0f, 1f)] public float offFrom = 0.75f;
 
     [Tooltip("Fuerza maxima. Bajalo si de noche brillan demasiado.")]
     [Range(0f, 1f)] public float maxStrength = 1f;
@@ -74,14 +78,15 @@ public class NightParticleFade : MonoBehaviour
         float desde = Mathf.Min(fullUntil, offFrom);
         float hasta = Mathf.Max(fullUntil, offFrom);
 
-        // 0 = prendidas del todo, 1 = apagadas del todo.
+        // 0 = todavia es de noche, 1 = ya es de dia.
         float apagado;
         if (hasta - desde < 0.0001f)
             apagado = hora >= hasta ? 1f : 0f;                 // iguales: se apagan de golpe a esa hora
         else
             apagado = Mathf.InverseLerp(desde, hasta, hora);   // 0 antes de "desde", 1 despues de "hasta"
 
-        float fuerza = maxStrength * (1f - apagado);
+        // "apagado" crece hacia el dia: las de noche usan lo contrario, las de dia eso mismo.
+        float fuerza = maxStrength * (dayOnly ? apagado : 1f - apagado);
 
         if (applied && Mathf.Approximately(fuerza, lastStrength)) return;
 

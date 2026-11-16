@@ -4,22 +4,28 @@ using UnityEngine;
 
 // Menu "Green Mist > 4. Luciérnagas".
 //
-// Crea (o actualiza) puntitos de luz que flotan despacio sobre el estanque y a lo largo
-// de la avenida de sakuras del sando. Son SOLO DE NOCHE: el componente NightParticleFade
-// del grupo los apaga hacia el amanecer.
+// Crea (o actualiza) puntitos de luz que flotan despacio: mas juntos sobre el estanque y en
+// la avenida de sakuras del sando, y unos cuantos que acompañan a Onji por todo el mapa.
+// Son SOLO DE NOCHE: el componente NightParticleFade del grupo los apaga hacia el dia.
 //
 // Todo cuelga de "Assets/GreenMist_Ambiente/GreenMist_Luciernagas".
 //
-// Si lo corres de nuevo: los emisores se rearman con estos valores, pero los valores de
-// NightParticleFade (a que hora se apagan) se respetan.
+// Si lo corres de nuevo: los emisores se rearman con estos valores y las horas de
+// NightParticleFade vuelven a las constantes de abajo.
 public static class GreenMistLuciernagas
 {
     const string NombreGrupo = "GreenMist_Luciernagas";
     const string Prefijo = "Luciernagas_";
 
-    // Particulas VIVAS por zona. Total 110 (tope acordado: 120).
+    // Particulas VIVAS por zona. Total 170. Son puntos diminutos: cuestan muy poco.
     const int CantEstanque = 50;
     const int CantAvenida = 60;
+    const int CantJugador = 60;      // las que acompañan a Onji por todo el mapa
+
+    // A que hora se apagan. El menu ESCRIBE estos valores en NightParticleFade cada vez que corre.
+    // Solo de noche o atardecer oscuro: enteras hasta 0.45, apagadas del todo desde 0.75.
+    const float EnterasHasta = 0.45f;
+    const float ApagadasDesde = 0.75f;
 
     [MenuItem("Green Mist/4. Luciérnagas", false, 104)]
     public static void Aplicar()
@@ -42,6 +48,9 @@ public static class GreenMistLuciernagas
         NightParticleFade noche = GreenMistEditorUtil.ObtenerOAgregar<NightParticleFade>(grupo);
         Undo.RecordObject(noche, "Green Mist: luciérnagas");
         noche.timeOfDay = hora;
+        noche.dayOnly = false;
+        noche.fullUntil = EnterasHasta;
+        noche.offFrom = ApagadasDesde;
         EditorUtility.SetDirty(noche);
 
         // ---------- 2) Textura y material ----------
@@ -116,17 +125,45 @@ public static class GreenMistLuciernagas
         avenida.transform.localPosition = new Vector3(31f, GreenMistParticulas.SueloLocalY + 1.5f, (zMin + zMax) * 0.5f);
         ConfigurarLuciernagas(avenida, mat, new Vector3(24f, 2.2f, zMax - zMin), CantAvenida);
 
+        // --- Las que acompañan a Onji: una caja de 28 x 28 m que lo sigue por todo el mapa.
+        // Asi hay luciernagas en la calle, el bambu, la subida al templo... sin sembrar todo el mapa.
+        // Las que ya nacieron se quedan en su lugar; las nuevas nacen alrededor de donde esta ahora.
+        // (La caja es plana: en pendientes fuertes algunas quedan bajo tierra o un poco altas.)
+        int total = CantEstanque + CantAvenida;
+        GameObject jugador = GreenMistEditorUtil.BuscarRaiz("PlayerRoot");
+        if (jugador != null)
+        {
+            ParticleSystem conOnji = GreenMistParticulas.PrepararEmisor(padre, "Luciernagas_Jugador", usados);
+            ConfigurarLuciernagas(conOnji, mat, new Vector3(28f, 2.5f, 28f), CantJugador);
+
+            FollowTargetPosition seguir = GreenMistEditorUtil.ObtenerOAgregar<FollowTargetPosition>(conOnji.gameObject);
+            Undo.RecordObject(seguir, "Green Mist: luciérnagas");
+            seguir.target = jugador.transform;
+            seguir.offset = new Vector3(0f, 1.3f, 0f);     // la caja va de los pies a 2.5 m de altura
+            EditorUtility.SetDirty(seguir);
+
+            conOnji.transform.position = jugador.transform.position + seguir.offset;
+            total += CantJugador;
+        }
+        else
+        {
+            // Sin jugador no se crea (y si habia uno viejo, BorrarSobrantes lo saca mas abajo).
+            Debug.LogWarning("[Green Mist] No encontré 'PlayerRoot' en la raíz de la escena: no creé las luciérnagas que acompañan a Onji.");
+        }
+
         int borrados = GreenMistParticulas.BorrarSobrantes(padre, Prefijo, usados);
         GreenMistParticulas.VistaPrevia(padre);
 
         AssetDatabase.SaveAssets();
         GreenMistEditorUtil.MarcarEscenaSucia();
 
-        Debug.Log("[Green Mist] Luciérnagas listas: " + usados.Count + " emisores y " + (CantEstanque + CantAvenida)
-                  + " partículas (tope 120) en '" + GreenMistEditorUtil.NombreAmbiente + "/" + NombreGrupo + "'"
-                  + (borrados > 0 ? ", " + borrados + " emisores viejos borrados" : "") + ".");
+        Debug.Log("[Green Mist] Luciérnagas listas: " + usados.Count + " emisores y " + total
+                  + " partículas en '" + GreenMistEditorUtil.NombreAmbiente + "/" + NombreGrupo + "'"
+                  + (borrados > 0 ? ", " + borrados + " emisores viejos borrados" : "")
+                  + ". Las horas de NightParticleFade se volvieron a poner en los valores del menú ("
+                  + EnterasHasta.ToString("0.00") + " / " + ApagadasDesde.ToString("0.00") + ").");
 
-        // Aviso util: con la hora guardada en la escena (0.98) estan apagadas y parece que el menu no hizo nada.
+        // Aviso util: si la hora guardada en la escena es de dia, estan apagadas y parece que el menu no hizo nada.
         // (Max: el componente ordena los dos umbrales, asi que la hora de apagado es el mayor de los dos.)
         float apagadasDesde = Mathf.Max(noche.fullUntil, noche.offFrom);
         if (hora != null && hora.time >= apagadasDesde)

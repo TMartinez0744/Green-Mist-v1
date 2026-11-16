@@ -14,7 +14,8 @@ using UnityEngine;
 // (sigue el color de la niebla de la escena tirado al verde, y se afina al amanecer).
 //
 // Si lo corres de nuevo: los emisores se rearman con estos valores (pisa lo que hayas
-// cambiado a mano en ellos), pero los valores de MistParticleTint se respetan.
+// cambiado a mano en ellos) y el COLOR de MistParticleTint vuelve al de las constantes de abajo.
+// Las horas y densidades de MistParticleTint si se respetan.
 public static class GreenMistNiebla
 {
     const string NombreGrupo = "GreenMist_Niebla";
@@ -28,9 +29,15 @@ public static class GreenMistNiebla
     const int TramosBambuNorte = 8;
     const int CantPorTramoNorte = 11;
 
-    // Altura del CENTRO de los copos sobre el suelo. Como miden ~1.2 m de alto, la niebla
-    // queda entre el suelo y la cintura.
-    const float AlturaCentro = 0.45f;
+    // Altura del CENTRO de los copos sobre el suelo. Como miden ~2.3 m de alto, la niebla
+    // queda entre el suelo y el pecho, mas rala arriba (el borde del copo es transparente).
+    const float AlturaCentro = 0.8f;
+
+    // Color de la niebla. El menu ESCRIBE estos valores en MistParticleTint cada vez que corre.
+    // Es un verde grisaceo y apagado: el anterior, mas saturado, quedaba fluo contra la noche.
+    static readonly Color VerdeNiebla = new Color(0.16f, 0.30f, 0.24f);
+    const float TironAlVerde = 0.40f;   // 0 = igual a la niebla de la escena, 1 = el verde de arriba
+    const float BrilloNiebla = 1.0f;
 
     [MenuItem("Green Mist/3. Niebla verde", false, 103)]
     public static void Aplicar()
@@ -52,6 +59,9 @@ public static class GreenMistNiebla
         MistParticleTint tinte = GreenMistEditorUtil.ObtenerOAgregar<MistParticleTint>(grupo);
         Undo.RecordObject(tinte, "Green Mist: niebla");
         tinte.timeOfDay = GreenMistEditorUtil.BuscarTimeOfDay();
+        tinte.greenTint = VerdeNiebla;
+        tinte.greenPull = TironAlVerde;
+        tinte.brightness = BrilloNiebla;
         EditorUtility.SetDirty(tinte);
 
         // ---------- 2) Textura y material ----------
@@ -79,17 +89,17 @@ public static class GreenMistNiebla
         int total = 0;
 
         // Sando: desde donde se une con la calle (Z 594) hasta antes de la zona de enemigos (Z 516). X 20 a 42.
-        total += ZonaPlana(padre, usados, mat, "Niebla_Sando", 31f, 555f, 22f, 78f, CantSando, 0.10f, 0.20f);
+        total += ZonaPlana(padre, usados, mat, "Niebla_Sando", 31f, 555f, 22f, 78f, CantSando, 0.085f, 0.17f);
 
         // Sando sur (Z 490 a 516): aca patrullan los enemigos, asi que va mas rala y mas transparente.
         // No baja de Z 490 porque mas al sur el terreno empieza a subir.
-        total += ZonaPlana(padre, usados, mat, "Niebla_Sando_Sur", 31f, 503f, 22f, 26f, CantSandoSur, 0.07f, 0.14f);
+        total += ZonaPlana(padre, usados, mat, "Niebla_Sando_Sur", 31f, 503f, 22f, 26f, CantSandoSur, 0.06f, 0.12f);
 
         // Calle: una capa fina entre las dos filas de casas. X 15 a 105.
-        total += ZonaPlana(padre, usados, mat, "Niebla_Calle", 60f, 608.2f, 90f, 9f, CantCalle, 0.06f, 0.12f);
+        total += ZonaPlana(padre, usados, mat, "Niebla_Calle", 60f, 608.2f, 90f, 9f, CantCalle, 0.05f, 0.10f);
 
         // Bambu sur: franja plana. X 42 a 122, Z 589 a 596.
-        total += ZonaPlana(padre, usados, mat, "Niebla_Bambu_Sur", 82f, 592.75f, 80f, 7f, CantBambuSur, 0.10f, 0.20f);
+        total += ZonaPlana(padre, usados, mat, "Niebla_Bambu_Sur", 82f, 592.75f, 80f, 7f, CantBambuSur, 0.085f, 0.17f);
 
         // Bambu norte: esta sobre una ladera. Un solo emisor plano quedaria enterrado o flotando,
         // asi que van varios chicos, cada uno apoyado e inclinado segun el terreno de su tramo.
@@ -98,7 +108,7 @@ public static class GreenMistNiebla
         {
             string nombre = "Niebla_Bambu_Norte_" + (i + 1);
             ParticleSystem ps = GreenMistParticulas.PrepararEmisor(padre, nombre, usados);
-            ConfigurarNiebla(ps, mat, new Vector3(anchoTramo, 0.3f, 7.5f), CantPorTramoNorte, 0.10f, 0.20f, 4f, 6.5f);
+            ConfigurarNiebla(ps, mat, new Vector3(anchoTramo, 0.6f, 7.5f), CantPorTramoNorte, 0.085f, 0.17f, 4f, 6.5f);
             ApoyarEnLadera(ps.transform, aldea, 8f + anchoTramo * (i + 0.5f), 625.9f, anchoTramo * 0.5f, 3.75f);
             total += CantPorTramoNorte;
         }
@@ -116,9 +126,10 @@ public static class GreenMistNiebla
         Debug.Log("[Green Mist] Niebla verde lista: " + usados.Count + " emisores y " + total
                   + " partículas (tope 350) en '" + GreenMistEditorUtil.NombreAmbiente + "/" + NombreGrupo + "'"
                   + (borrados > 0 ? ", " + borrados + " emisores viejos borrados" : "")
-                  + ". El color y la densidad se ven en Play (componente MistParticleTint).");
+                  + ". El color y la densidad se ven en Play (componente MistParticleTint);"
+                  + " su color se volvió a poner en los valores del menú.");
 
-        // Aviso util: con la hora guardada en la escena (0.98) la niebla esta en su version fina de amanecer.
+        // Aviso util: si la hora guardada en la escena es de dia, la niebla esta en su version fina de amanecer.
         // (Min: el componente ordena los dos umbrales, asi que empieza a afinarse desde el menor de los dos.)
         if (tinte.timeOfDay != null && tinte.timeOfDay.time > Mathf.Min(tinte.thinFrom, tinte.thinUntil))
             Debug.LogWarning("[Green Mist] Ojo: la niebla se afina al amanecer. Ahora TimeOfDay.time = "
@@ -132,7 +143,7 @@ public static class GreenMistNiebla
     {
         ParticleSystem ps = GreenMistParticulas.PrepararEmisor(padre, nombre, usados);
         ps.transform.localPosition = new Vector3(cx, GreenMistParticulas.SueloLocalY + AlturaCentro, cz);
-        ConfigurarNiebla(ps, mat, new Vector3(tx, 0.3f, tz), cantidad, alfaMin, alfaMax, 6f, 9f);
+        ConfigurarNiebla(ps, mat, new Vector3(tx, 0.6f, tz), cantidad, alfaMin, alfaMax, 6f, 9f);
         return cantidad;
     }
 
@@ -145,11 +156,11 @@ public static class GreenMistNiebla
 
         ParticleSystem.MainModule main = ps.main;
 
-        // Tamaño distinto por eje: varios metros de ancho y poco mas de un metro de alto.
-        // Eso es lo que hace que la niebla quede "acostada" contra el suelo.
+        // Tamaño distinto por eje: varios metros de ancho y unos dos metros de alto.
+        // Sigue siendo mas ancha que alta: eso es lo que la deja "acostada" contra el suelo.
         main.startSize3D = true;
         main.startSizeX = new ParticleSystem.MinMaxCurve(anchoMin, anchoMax);
-        main.startSizeY = new ParticleSystem.MinMaxCurve(0.9f, 1.5f);
+        main.startSizeY = new ParticleSystem.MinMaxCurve(1.8f, 2.8f);
         main.startSizeZ = new ParticleSystem.MinMaxCurve(1f, 1f);
 
         main.startRotation3D = false;

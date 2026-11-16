@@ -6,6 +6,7 @@ using UnityEngine;
 //
 // Crea (o actualiza) pétalos que caen de la copa de cada sakura y una deriva liviana
 // a lo largo del sando. Pocos (290 en total, tope 300), chicos y con desvanecido.
+// SOLO DE DIA (NightParticleFade en modo "dayOnly") y en RAFAGAS: no caen todo el tiempo.
 //
 // Usan el material de particulas de URP CON LUZ (Particles/Simple Lit, transparente):
 // asi los faroles los iluminan calidos y de noche quedan oscuros como el resto de la escena.
@@ -28,6 +29,22 @@ public static class GreenMistPetalos
     // para llegar de la copa al suelo.
     const float CaidaMedia = 0.4f;
 
+    // SOLO DE DIA. El menu ESCRIBE estas horas en NightParticleFade (modo "dayOnly") cada vez que corre.
+    // Apagados de noche hasta 0.45; van apareciendo y desde 0.70 estan enteros.
+    const float ApagadosHasta = 0.45f;
+    const float EnterosDesde = 0.70f;
+
+    // RAFAGAS: los petalos no caen todo el tiempo. Cada emisor repite un ciclo de estos segundos
+    // (cada uno un poco distinto, asi no van todos a la vez) y solo suelta petalos en la primera
+    // parte del ciclo. Con FraccionRafaga = 1 caerian siempre.
+    const float CicloRafaga = 36f;
+    const float FraccionRafaga = 0.45f;
+
+    // En que parte de su ciclo cae la rafaga de cada arbol (0 = al principio, 1 = al final).
+    // Todas distintas, para que no suelten petalos todos a la vez. El primero usa 1: asi al
+    // arrancar el juego ya hay petalos en el aire.
+    static readonly float[] PosicionesRafaga = { 1f, 0.3f, 0.65f, 0.05f };
+
     [MenuItem("Green Mist/5. Pétalos de sakura", false, 105)]
     public static void Aplicar()
     {
@@ -44,6 +61,16 @@ public static class GreenMistPetalos
         grupo.transform.localPosition = Vector3.zero;      // asi sus hijos usan las coordenadas del pueblo
         grupo.transform.localRotation = Quaternion.identity;
         grupo.transform.localScale = Vector3.one;
+
+        // El mismo componente que apaga las luciernagas de dia, pero dado vuelta: petalos solo de dia.
+        TimeOfDay hora = GreenMistEditorUtil.BuscarTimeOfDay();
+        NightParticleFade dia = GreenMistEditorUtil.ObtenerOAgregar<NightParticleFade>(grupo);
+        Undo.RecordObject(dia, "Green Mist: pétalos");
+        dia.timeOfDay = hora;
+        dia.dayOnly = true;
+        dia.fullUntil = ApagadosHasta;
+        dia.offFrom = EnterosDesde;
+        EditorUtility.SetDirty(dia);
 
         // ---------- 2) Textura y material ----------
         Texture2D textura = GreenMistParticulas.TexturaPetalo();
@@ -107,7 +134,8 @@ public static class GreenMistPetalos
                 ParticleSystem ps = GreenMistParticulas.PrepararEmisor(padre, Prefijo + arbol.name, usados);
                 ps.transform.position = centroCopa;
                 ConfigurarPetalos(ps, mat, tamCopa, porArbol, vida * 0.8f, vida * 1.1f,
-                                  new Vector3(-0.20f, -0.50f, -0.15f), new Vector3(0.20f, -0.30f, 0.15f));
+                                  new Vector3(-0.20f, -0.50f, -0.15f), new Vector3(0.20f, -0.30f, 0.15f),
+                                  CicloRafaga + 5f * arboles, PosicionesRafaga[arboles % PosicionesRafaga.Length]);
                 total += porArbol;
                 arboles++;
             }
@@ -120,7 +148,8 @@ public static class GreenMistPetalos
         ParticleSystem sando = GreenMistParticulas.PrepararEmisor(padre, "Petalos_Sando", usados);
         sando.transform.localPosition = new Vector3(31f, GreenMistParticulas.SueloLocalY + 2.75f, 540f);
         ConfigurarPetalos(sando, mat, new Vector3(22f, 3.5f, 100f), CantSando, 9f, 13f,
-                          new Vector3(0.15f, -0.30f, -0.10f), new Vector3(0.45f, -0.12f, 0.10f));
+                          new Vector3(0.15f, -0.30f, -0.10f), new Vector3(0.45f, -0.12f, 0.10f),
+                          CicloRafaga + 8f, 0.8f);
         total += CantSando;
 
         int borrados = GreenMistParticulas.BorrarSobrantes(padre, Prefijo, usados);
@@ -132,17 +161,62 @@ public static class GreenMistPetalos
         Debug.Log("[Green Mist] Pétalos listos: " + arboles + " sakuras + la deriva del sando, " + total
                   + " partículas (tope 300) en '" + GreenMistEditorUtil.NombreAmbiente + "/" + NombreGrupo + "'"
                   + (borrados > 0 ? ", " + borrados + " emisores viejos borrados" : "") + ".");
+
+        // Aviso util: son solo de dia, asi que de noche parece que el menu no hizo nada.
+        if (hora != null && hora.time <= ApagadosHasta)
+            Debug.LogWarning("[Green Mist] Ojo: los pétalos son solo de día. Ahora TimeOfDay.time = " + hora.time.ToString("0.00")
+                             + " y recién aparecen después de " + ApagadosHasta.ToString("0.00")
+                             + ", así que en Play NO se van a ver. Subí 'Time' del objeto TimeOfDay a 0.8 para verlos.");
     }
 
-    // Los valores de un emisor de petalos: chicos, que caen despacio girando sobre si mismos.
+    // La curva de una rafaga a lo largo del ciclo (0 = empieza el ciclo, 1 = termina).
+    // Vale 0 (no nace nada), sube rapido a 1, se queda ahi y vuelve a 0.
+    // "posicion" dice en que parte del ciclo cae la rafaga: 0 = al principio, 1 = al final.
+    // Con 1 la rafaga termina justo cuando el ciclo vuelve a empezar, asi que al arrancar
+    // el juego ese emisor ya tiene petalos en el aire.
+    static AnimationCurve CurvaRafaga(float posicion)
+    {
+        float f = Mathf.Clamp(FraccionRafaga, 0.1f, 1f);
+        if (f >= 0.99f) return AnimationCurve.Constant(0f, 1f, 1f);   // sin rafagas: caen siempre
+
+        float inicio = (1f - f) * Mathf.Clamp01(posicion);
+        float fin = inicio + f;
+        float rampa = f * 0.15f;
+
+        List<Keyframe> puntos = new List<Keyframe>();
+        if (inicio > 0.001f) puntos.Add(new Keyframe(0f, 0f));
+        puntos.Add(new Keyframe(inicio, 0f));
+        puntos.Add(new Keyframe(inicio + rampa, 1f));
+        puntos.Add(new Keyframe(fin - rampa, 1f));
+        puntos.Add(new Keyframe(fin, 0f));
+        if (fin < 0.999f) puntos.Add(new Keyframe(1f, 0f));
+        return new AnimationCurve(puntos.ToArray());
+    }
+
+    // Los valores de un emisor de petalos: chicos, que caen despacio girando sobre si mismos,
+    // y que vienen en rafagas ("ciclo" = cada cuantos segundos se repite la rafaga;
+    // "posicionRafaga" = en que parte del ciclo cae, de 0 a 1, para que no vayan todos juntos).
     static void ConfigurarPetalos(ParticleSystem ps, Material mat, Vector3 caja, int cantidad,
-                                  float vidaMin, float vidaMax, Vector3 velMin, Vector3 velMax)
+                                  float vidaMin, float vidaMax, Vector3 velMin, Vector3 velMax,
+                                  float ciclo, float posicionRafaga)
     {
         GreenMistParticulas.ConfigurarBase(ps, cantidad, vidaMin, vidaMax);
 
         ParticleSystem.MainModule main = ps.main;
+
+        // Rafagas: la cantidad que nace por segundo sigue una curva a lo largo del ciclo.
+        main.duration = ciclo;
+        float nacenPorSegundo = cantidad / ((vidaMin + vidaMax) * 0.5f);
+        ParticleSystem.EmissionModule emision = ps.emission;
+        emision.rateOverTime = new ParticleSystem.MinMaxCurve(nacenPorSegundo, CurvaRafaga(posicionRafaga));
+
+        // Por defecto Unity PAUSA un sistema en loop cuando no esta en pantalla. Entre rafagas
+        // estos emisores quedan vacios y Unity los daria por "fuera de pantalla": el reloj de la
+        // rafaga se frenaria. Con esto siguen corriendo siempre (son pocos petalos, no pesa).
+        main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+
         main.startSize3D = false;
-        main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.08f);   // 4.5 a 8 cm
+        main.startSize = new ParticleSystem.MinMaxCurve(0.09f, 0.16f);   // 9 a 16 cm (antes 4.5 a 8: casi no se veian)
 
         // Giro inicial al azar en los TRES ejes: asi no son cartelitos que siempre miran a la camara,
         // sino laminitas que a veces se ven de frente y a veces de canto. (Desde codigo va en radianes.)

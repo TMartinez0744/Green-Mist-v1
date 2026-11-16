@@ -24,10 +24,10 @@ public class MistParticleTint : MonoBehaviour
 
     [Header("Color")]
     [Tooltip("El verde hacia el que se tira el color de la niebla de la escena.")]
-    public Color greenTint = new Color(0.20f, 0.52f, 0.36f);
+    public Color greenTint = new Color(0.16f, 0.30f, 0.24f);
 
     [Tooltip("Cuanto se tira hacia el verde. 0 = igual a la niebla de la escena, 1 = el verde puro de arriba.")]
-    [Range(0f, 1f)] public float greenPull = 0.55f;
+    [Range(0f, 1f)] public float greenPull = 0.40f;
 
     [Tooltip("Brillo de la niebla. 1 = normal. Subilo si de noche casi no se ve; bajalo si parece que brilla sola. Tiene un tope interno para que nunca dispare el bloom: pasado ese tope, subirlo no cambia nada.")]
     [Range(0.2f, 2.5f)] public float brightness = 1f;

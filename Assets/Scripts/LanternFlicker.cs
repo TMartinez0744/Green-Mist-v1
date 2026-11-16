@@ -41,8 +41,11 @@ public class LanternFlicker : MonoBehaviour
 
     void Update()
     {
-        // Time.time se frena con la pausa y el hit stop: la llama se congela con el juego.
-        float t = Time.time;
+        // Tiempo REAL (unscaled): la llama sigue titilando aunque el juego tenga
+        // el tiempo frenado. El menu de inicio corre con Time.timeScale en 0 y
+        // con Time.time los faroles quedaban congelados, como en una foto.
+        // (Por lo mismo tambien titilan detras de la pausa y durante el hit stop.)
+        float t = Time.unscaledTime;
 
         // PerlinNoise devuelve un valor suave entre 0 y 1.
         float lento = Mathf.PerlinNoise(seed, t * speed);
