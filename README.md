@@ -57,9 +57,11 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ![The village before the climb](docs/images/village.jpg)
 
-![A villager by the bridge](docs/images/bridge.jpg)
-
 ![Onji leaping the garden bridge, the lit approach beyond](docs/images/onji2.jpg)
+
+![Onji walking the lantern-lit street at night, the watchtower ahead](docs/images/street-night.jpg)
+
+![The shrine approach under the moon, guarded by komainu](docs/images/moon-approach.jpg)
 
 ---
 
