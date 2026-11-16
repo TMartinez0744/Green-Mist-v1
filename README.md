@@ -47,19 +47,15 @@ The score uses traditional instrumentation — koto, shakuhachi, shamisen — ke
 
 ## Gallery
 
+![Onji walking the lantern-lit street at night, the watchtower ahead](docs/images/street-night.jpg)
+
 ![The shrine approach at nightfall, the summit pagoda in the mist beyond the torii](docs/images/approach.jpg)
 
 ![The lantern-lit street, the watchtower at its end](docs/images/street.jpg)
 
 ![The whole climb in one view: the village, the shrine approach, the mountain and Fuji beyond](docs/images/panorama.jpg)
 
-![Onji on the lantern-lit street before setting out](docs/images/onji.jpg)
-
-![The village before the climb](docs/images/village.jpg)
-
 ![Onji leaping the garden bridge, the lit approach beyond](docs/images/onji2.jpg)
-
-![Onji walking the lantern-lit street at night, the watchtower ahead](docs/images/street-night.jpg)
 
 ![The shrine approach under the moon, guarded by komainu](docs/images/moon-approach.jpg)
 
