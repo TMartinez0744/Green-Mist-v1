@@ -1,14 +1,28 @@
+using System.Collections;
 using UnityEngine;
 
 public class MusicManager : MonoBehaviour
 {
     public static MusicManager Instance;
 
+    [Header("Pistas")]
     public AudioClip menuMusic;
     public AudioClip gameplayMusic;
     public AudioClip bossMusic;
 
-    AudioSource audioSource;
+    [Header("Transicion")]
+    [Tooltip("Segundos que tarda en cruzar de una pista a la otra.")]
+    public float crossfadeDuration = 2.5f;
+
+    // Dos fuentes para poder solapar las pistas: una baja mientras la otra sube.
+    // La segunda se crea sola en Awake, no hay que agregarla en el Inspector.
+    AudioSource actual;
+    AudioSource reserva;
+
+    // El volumen que eligio el jugador con el slider. Se guarda aparte porque
+    // durante el cruce el volumen de cada fuente lo maneja la corrutina.
+    float volumenJugador = 1f;
+    Coroutine cruce;
 
     void Awake()
     {
@@ -21,33 +35,93 @@ public class MusicManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        audioSource = GetComponentInChildren<AudioSource>();
+        actual = GetComponentInChildren<AudioSource>();
+        if (actual == null) actual = gameObject.AddComponent<AudioSource>();
+
+        volumenJugador = actual.volume;
+        actual.playOnAwake = false;
+        actual.loop = true;
+
+        reserva = actual.gameObject.AddComponent<AudioSource>();
+        reserva.outputAudioMixerGroup = actual.outputAudioMixerGroup;
+        reserva.spatialBlend = actual.spatialBlend;
+        reserva.priority = actual.priority;
+        reserva.playOnAwake = false;
+        reserva.loop = true;
+        reserva.volume = 0f;
     }
 
     void Start()
     {
-        PlayMenuMusic(); // <- como tu versión de ayer
+        PlayMenuMusic();
     }
 
-    public void PlayMenuMusic()     => PlayClip(menuMusic);
-    public void PlayGameplayMusic() => PlayClip(gameplayMusic);
-    public void PlayBossMusic()     => PlayClip(bossMusic);
+    public void PlayMenuMusic()     => Play(menuMusic);
+    public void PlayGameplayMusic() => Play(gameplayMusic);
+    public void PlayBossMusic()     => Play(bossMusic);
 
-    void PlayClip(AudioClip clip)
+    public void Play(AudioClip clip)
     {
-        if (clip == null || audioSource == null) return;
+        if (clip == null || actual == null) return;
 
-        // si ya es el mismo clip Y está sonando, no hagas nada
-        if (audioSource.clip == clip && audioSource.isPlaying) return;
+        // Ya esta sonando esa pista: no reiniciarla.
+        // (MainMenuUI pide la musica del menu en cada recarga de escena.)
+        if (actual.clip == clip && actual.isPlaying) return;
 
-        audioSource.Stop();
-        audioSource.clip = clip;
-        audioSource.loop = true;
-        audioSource.Play();
+        if (cruce != null) StopCoroutine(cruce);
+
+        // Todavia no sonaba nada: entra directo, sin cruce.
+        if (!actual.isPlaying)
+        {
+            actual.clip = clip;
+            actual.volume = volumenJugador;
+            actual.Play();
+            cruce = null;
+            return;
+        }
+
+        cruce = StartCoroutine(Cruzar(clip));
+    }
+
+    IEnumerator Cruzar(AudioClip clip)
+    {
+        reserva.clip = clip;
+        reserva.volume = 0f;
+        reserva.Play();
+
+        float t = 0f;
+        float desde = actual.volume;
+
+        while (t < crossfadeDuration)
+        {
+            // unscaledDeltaTime: en el menu Time.timeScale esta en 0.
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / crossfadeDuration);
+            actual.volume  = Mathf.Lerp(desde, 0f, k);
+            reserva.volume = Mathf.Lerp(0f, volumenJugador, k);
+            yield return null;
+        }
+
+        actual.Stop();
+        actual.clip = null;
+        actual.volume = volumenJugador;
+        reserva.volume = volumenJugador;
+
+        // La reserva pasa a ser la fuente activa.
+        AudioSource tmp = actual;
+        actual = reserva;
+        reserva = tmp;
+
+        cruce = null;
     }
 
     public void SetVolume(float v)
     {
-        if (audioSource) audioSource.volume = v;
+        volumenJugador = Mathf.Clamp01(v);
+
+        // Si hay un cruce en marcha, los volumenes los maneja la corrutina.
+        if (cruce == null && actual != null) actual.volume = volumenJugador;
     }
+
+    public float GetVolume() => volumenJugador;
 }

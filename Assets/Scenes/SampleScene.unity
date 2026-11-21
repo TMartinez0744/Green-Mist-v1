@@ -14555,9 +14555,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41c243fbcccef404180c11144e062816, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  menuMusic: {fileID: 8300000, guid: dc000e637b498f74eade71645946f2ee, type: 3}
+  menuMusic: {fileID: 8300000, guid: f197f77cdd825394ca77abd6961d9b10, type: 3}
   gameplayMusic: {fileID: 8300000, guid: ffe07474d5c06bc43874960fd1a50d7c, type: 3}
   bossMusic: {fileID: 8300000, guid: dc12cbc4311b565468262e5674f8cbfa, type: 3}
+  crossfadeDuration: 2.5
 --- !u!4 &306646133
 Transform:
   m_ObjectHideFlags: 0
